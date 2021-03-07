@@ -87,20 +87,22 @@ class HarvestGameEnv(MultiGridEnv):
 
     @staticmethod
     def neighbs(x: int, y: int) -> List[Tuple[int, int]]:
-       return [
+        """returns 8 neighbors"""
+        return [
             (x - 1, y - 1), (x - 1, y), (x - 1, y + 1),
             (x, y - 1), (x, y + 1),
             (x + 1, y - 1), (x + 1, y), (x + 1, y + 1)
         ]
 
-    def _rand_neighbor(self, x: int, y: int, max_tries: float = np.inf) -> Optional[Tuple[int, int]]:
+    def _rand_neighbor(self, x: int, y: int, max_tries: float = np.inf) -> Tuple[int, int]:
+        """Returns one of 8 neighbors, with wall case handling."""
         neighbs = self.neighbs(x, y)
         # neighbs = self.eps_neighb(self.radius, (x,y))
 
         num_tries = 0
         while True:
             if max_tries < num_tries:
-                return None
+                raise RecursionError("rejection sampling failed in place_obj")
             neighb = self._rand_elem(neighbs)
             if neighb[0] >= self.grid.width or neighb[1] >= self.grid.height:
                 num_tries += 1
@@ -134,6 +136,8 @@ class HarvestGameEnv(MultiGridEnv):
                 y0 <= y - epsilon,
                 y0 >= y + epsilon
             ])
+            # from math import sqrt
+            # return sqrt((x - x0) ** 2 + (y - y0) ** 2) < epsilon
 
         if top is None:
             top = (0, 0)
@@ -225,6 +229,7 @@ class HarvestGameEnv(MultiGridEnv):
         return pos
 
     def step(self, actions):
+        """a time tick in the game"""
         p = 1.006e-3
         for i, ob in enumerate(self.grid.grid):
             if ob is None or isinstance(i, (Agent, Wall)):
@@ -250,7 +255,7 @@ class Harvest4HEnv10x10N2(HarvestGameEnv):
         super().__init__(
             size=self.size,
             init_resource=[self.size // 4],
-            agents_idx=list(range(1, self.size // 8)),
+            agents_idx=list(range(1, self.size // 8 + 1)),
             resource_idx=[0],
             resource_reward=[1],
             zero_sum=False
