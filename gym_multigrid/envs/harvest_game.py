@@ -241,6 +241,7 @@ class HarvestGameEnv(MultiGridEnv):
         obs, rewards, done, info = MultiGridEnv.step(self, actions)
         if not any([isinstance(ob, Ball) for ob in self.grid.grid]):
             done = True
+            self.reset()
         return obs, rewards, done, info
 
 class Harvest4HEnv10x10N2(HarvestGameEnv):
