@@ -17,6 +17,13 @@ def main():
         )
         env = gym.make('multigrid-soccer-v0')
 
+    elif args.env == "harvest":
+        register(
+            id="multigrid-harvest-v0",
+            entry_point="gym_multigrid.envs:Harvest4HEnv10x10N2"
+        )
+        env = gym.make("multigrid-harvest-v0")
+
     else:
         register(
             id='multigrid-collect-v0',
