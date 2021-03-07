@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 from gym_multigrid.multigrid import World, Agent, Grid, Ball, MultiGridEnv, Wall
 import numpy as np
 
@@ -112,7 +112,13 @@ class HarvestGameEnv(MultiGridEnv):
     def eps_neighb(epsilon: int, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         pass
 
-    def _rand_rim(self, top=None, size=None, reject_fn=None, max_tries=np.inf) -> Tuple[int, int]:
+    def _rand_rim(
+            self,
+            top: Optional[Tuple[int, int]] = None,
+            size: Optional[Tuple[int, int]] = None,
+            reject_fn: Optional[Callable[[...], bool]] = None,
+            max_tries: float = np.inf
+    ) -> Tuple[int, int]:
         """Returns a random position near the rim of the world"""
 
         def eps_neighb_member(epsilon: int, pos: Tuple[int, int], x0: Tuple[int, int]) -> bool:
@@ -166,11 +172,11 @@ class HarvestGameEnv(MultiGridEnv):
 
     def place_obj(
             self,
-            obj,
-            top=None,
-            size=None,
-            reject_fn=None,
-            max_tries=np.inf
+            obj: Optional[Union[Agent, Wall, Ball]],
+            top: Optional[Tuple[int, int]] = None,
+            size: Optional[Tuple[int, int]] = None,
+            reject_fn: Optional[Callable[[...], bool]] = None,
+            max_tries: float = np.inf
     ) -> Tuple[int, int]:
         """Place an object at an empty position in the grid"""
         if top is None:
