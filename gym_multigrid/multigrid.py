@@ -1220,7 +1220,7 @@ class MultiGridEnv(gym.Env):
         agent.init_pos = pos
 
         if rand_dir:
-            agent.dir = self._and_int(0, 4)
+            agent.dir = self._rand_int(0, 4)
 
         agent.init_dir = agent.dir
 
