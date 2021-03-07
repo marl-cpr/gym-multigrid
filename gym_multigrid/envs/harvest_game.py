@@ -226,8 +226,6 @@ class HarvestGameEnv(MultiGridEnv):
 
     def step(self, actions):
         p = 1.006e-3
-        reward = 1
-        idx = len(self.resource_idx) + 1
         for i, ob in enumerate(self.grid.grid):
             if ob is None or isinstance(i, (Agent, Wall)):
                 continue
@@ -239,9 +237,11 @@ class HarvestGameEnv(MultiGridEnv):
                 resource_neighbs.append(neighb)
             if self._rand_float(0, 1) > 1 - p * len(resource_neighbs):
                 self.place_obj(Ball(self.world))
-                idx += 1
 
-        return MultiGridEnv.step(self, actions)
+        obs, rewards, done, info = MultiGridEnv.step(self, actions)
+        if not any([isinstance(ob, Ball) for ob in self.grid.grid]):
+            done = True
+        return obs, rewards, done, info
 
 class Harvest4HEnv10x10N2(HarvestGameEnv):
     size = 32
@@ -249,7 +249,7 @@ class Harvest4HEnv10x10N2(HarvestGameEnv):
         super().__init__(
             size=self.size,
             init_resource=[self.size // 4],
-            agents_idx=[1,2,3],
+            agents_idx=list(range(1, self.size // 8)),
             resource_idx=[0],
             resource_reward=[1],
             zero_sum=False
