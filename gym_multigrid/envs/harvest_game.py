@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple, Union, Callable
 from gym_multigrid.multigrid import World, Agent, Grid, Ball, MultiGridEnv, Wall
 import numpy as np
 
@@ -116,7 +116,7 @@ class HarvestGameEnv(MultiGridEnv):
             self,
             top: Optional[Tuple[int, int]] = None,
             size: Optional[Tuple[int, int]] = None,
-            reject_fn: Optional[Callable[[...], bool]] = None,
+            reject_fn: Optional[Callable[..., bool]] = None,
             max_tries: float = np.inf
     ) -> Tuple[int, int]:
         """Returns a random position near the rim of the world"""
@@ -175,7 +175,7 @@ class HarvestGameEnv(MultiGridEnv):
             obj: Optional[Union[Agent, Wall, Ball]],
             top: Optional[Tuple[int, int]] = None,
             size: Optional[Tuple[int, int]] = None,
-            reject_fn: Optional[Callable[[...], bool]] = None,
+            reject_fn: Optional[Callable[..., bool]] = None,
             max_tries: float = np.inf
     ) -> Tuple[int, int]:
         """Place an object at an empty position in the grid"""
