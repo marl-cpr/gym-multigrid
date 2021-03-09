@@ -1,6 +1,6 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union, Callable
 from gym_multigrid.multigrid import World, Agent, Grid, Ball, MultiGridEnv, \
-    HarvestActions
+    Wall, HarvestActions
 import numpy as np
 
 class HarvestGameEnv(MultiGridEnv):
@@ -18,7 +18,7 @@ class HarvestGameEnv(MultiGridEnv):
             resource_reward: List[int] = list(),
             zero_sum: bool = False,
             agent_view_size: int = 7,
-            actions_set = HarvestActions,
+            actions_set=HarvestActions,
     ):
         self.init_resource = init_resource
         self.resource_idx = resource_idx
@@ -90,25 +90,47 @@ class HarvestGameEnv(MultiGridEnv):
         """Will fail if called before _gen_grid"""
         return (self.grid.width // 2, self.grid.height // 2)
 
-    def _rand_neighbor(self, x: int, y: int) -> Tuple[int, int]:
-        neighbs = [
+    @staticmethod
+    def neighbs(x: int, y: int) -> List[Tuple[int, int]]:
+        """returns 8 neighbors"""
+        return [
             (x - 1, y - 1), (x - 1, y), (x - 1, y + 1),
             (x, y - 1), (x, y + 1),
             (x + 1, y - 1), (x + 1, y), (x + 1, y + 1)
         ]
+
+    def _rand_neighbor(self, x: int, y: int, max_tries: float = np.inf) -> Tuple[int, int]:
+        """Returns one of 8 neighbors, with wall case handling."""
+        neighbs = self.neighbs(x, y)
         # neighbs = self.eps_neighb(self.radius, (x,y))
-        return self._rand_elem(neighbs)
+
+        num_tries = 0
+        while True:
+            if max_tries < num_tries:
+                raise RecursionError("rejection sampling failed in place_obj")
+            neighb = self._rand_elem(neighbs)
+            if neighb[0] >= self.grid.width or neighb[1] >= self.grid.height:
+                num_tries += 1
+                continue
+            else:
+                return neighb
 
     @staticmethod
     def eps_neighb(epsilon: int, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         pass
 
-    def _rand_rim(self, top=None, size=None, reject_fn=None, max_tries=np.inf) -> Tuple[int, int]:
+    def _rand_rim(
+            self,
+            top: Optional[Tuple[int, int]] = None,
+            size: Optional[Tuple[int, int]] = None,
+            reject_fn: Optional[Callable[..., bool]] = None,
+            max_tries: float = np.inf
+    ) -> Tuple[int, int]:
         """Returns a random position near the rim of the world"""
 
         def eps_neighb_member(epsilon: int, pos: Tuple[int, int], x0: Tuple[int, int]) -> bool:
             """
-            is x in the discrete epsilon-neighborhood about pos
+            is x0 in the discrete epsilon-neighborhood about pos
             actually this makes a box rather than a ball :(
             """
             x, y = pos
@@ -119,6 +141,8 @@ class HarvestGameEnv(MultiGridEnv):
                 y0 <= y - epsilon,
                 y0 >= y + epsilon
             ])
+            # from math import sqrt
+            # return sqrt((x - x0) ** 2 + (y - y0) ** 2) < epsilon
 
         if top is None:
             top = (0, 0)
@@ -157,11 +181,11 @@ class HarvestGameEnv(MultiGridEnv):
 
     def place_obj(
             self,
-            obj,
-            top=None,
-            size=None,
-            reject_fn=None,
-            max_tries=np.inf
+            obj: Optional[Union[Agent, Wall, Ball]],
+            top: Optional[Tuple[int, int]] = None,
+            size: Optional[Tuple[int, int]] = None,
+            reject_fn: Optional[Callable[..., bool]] = None,
+            max_tries: float = np.inf
     ) -> Tuple[int, int]:
         """Place an object at an empty position in the grid"""
         if top is None:
@@ -194,10 +218,9 @@ class HarvestGameEnv(MultiGridEnv):
                 obj.cur_pos = pos
             return pos
 
-        middle = (self.grid.width // 2, self.grid.height // 2)
-        radius = (self.grid.width + self.grid.height) // 6
+        assert isinstance(obj, Ball)
 
-        pos = np.array(middle)
+        pos = np.array(self.middle)
 
         while self.grid.get(*pos) != None:
             pos = self._rand_neighbor(*pos)
@@ -211,7 +234,25 @@ class HarvestGameEnv(MultiGridEnv):
         return pos
 
     def step(self, actions):
-        return MultiGridEnv.step(self, actions)
+        """a time tick in the game"""
+        p = 1.006e-3
+        for i, ob in enumerate(self.grid.grid):
+            if ob is None or isinstance(i, (Agent, Wall)):
+                continue
+            x, y = divmod(i, self.width) # i'm not 100% sure this is correct
+            resource_neighbs = list()
+            for neighb in self.neighbs(x,y):
+                if neighb is None or isinstance(neighb, (Agent, Wall)):
+                    continue
+                resource_neighbs.append(neighb)
+            if self._rand_float(0, 1) > 1 - p * len(resource_neighbs):
+                self.place_obj(Ball(self.world))
+
+        obs, rewards, done, info = MultiGridEnv.step(self, actions)
+        if not any([isinstance(ob, Ball) for ob in self.grid.grid]):
+            done = True
+            self.reset()
+        return obs, rewards, done, info
 
 class HarvestAgent(Agent):
     """
@@ -242,7 +283,7 @@ class Harvest4HEnv10x10N2(HarvestGameEnv):
         super().__init__(
             size=self.size,
             init_resource=[self.size // 4],
-            agents_idx=[1,2,3],
+            agents_idx=list(range(1, self.size // 8 + 1)),
             resource_idx=[0],
             resource_reward=[1],
             zero_sum=False
