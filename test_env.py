@@ -24,9 +24,9 @@ def main():
 
         actions = [0] * len(env.agents)
         for i in range(len(env.agents)):
-            action = env.agents[i].get_action(obs[0][i], )
+            actions[i] = env.agents[i].get_action(obs[0][i], )
 
-        obs, _, done, _ = env.step(agents)
+        obs, _, done, _ = env.step(actions)
 
         if done:
             break
