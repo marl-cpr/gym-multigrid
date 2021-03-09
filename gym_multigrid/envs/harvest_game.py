@@ -1,5 +1,6 @@
 from typing import Optional, List, Tuple
-from gym_multigrid.multigrid import World, Agent, Grid, Ball, MultiGridEnv
+from gym_multigrid.multigrid import World, Agent, Grid, Ball, MultiGridEnv, \
+    HarvestActions
 import numpy as np
 
 class HarvestGameEnv(MultiGridEnv):
@@ -17,6 +18,7 @@ class HarvestGameEnv(MultiGridEnv):
             resource_reward: List[int] = list(),
             zero_sum: bool = False,
             agent_view_size: int = 7,
+            actions_set = HarvestActions,
     ):
         self.init_resource = init_resource
         self.resource_idx = resource_idx
@@ -27,6 +29,8 @@ class HarvestGameEnv(MultiGridEnv):
 
         agents = [Agent(self.world, i, view_size=agent_view_size) for i in agents_idx]
 
+        self.ledgers = np.empty((len(agents), len(agents)))
+
         super().__init__(
             grid_size=size,
             width=width,
@@ -35,7 +39,8 @@ class HarvestGameEnv(MultiGridEnv):
             # set this to true for maximum speed
             see_through_walls=False,
             agents=agents,
-            agent_view_size=agent_view_size
+            agent_view_size=agent_view_size,
+            actions_set=actions_set
         )
 
     def _gen_grid(self, width: int, height: int):
@@ -189,8 +194,6 @@ class HarvestGameEnv(MultiGridEnv):
                 obj.cur_pos = pos
             return pos
 
-        num_tries = 0
-
         middle = (self.grid.width // 2, self.grid.height // 2)
         radius = (self.grid.width + self.grid.height) // 6
 
@@ -209,6 +212,29 @@ class HarvestGameEnv(MultiGridEnv):
 
     def step(self, actions):
         return MultiGridEnv.step(self, actions)
+
+class HarvestAgent(Agent):
+    """
+    Extension of the default Agent with custom behaviors
+    """
+
+    def __init__(self, world, index=0, view_size=7, learning_algorithm='ppo'):
+        super(HarvestAgent, self).__init__(world, 'agent',
+                                           world.IDX_TO_COLOR[index])
+        self.learning_algorithm = learning_algorithm
+        self.freeze_counter = 0
+
+    def get_action(self, subgrid, reputations):
+        """
+        Get an action using the observable world state and reputation ledger
+        """
+        if self.paused:
+            self.freeze_counter -= 1
+            if self.freeze_counter == 0:
+                self.paused = False
+            return 0
+
+        return np.random.randint(0, 8)
 
 class Harvest4HEnv10x10N2(HarvestGameEnv):
     size = 32

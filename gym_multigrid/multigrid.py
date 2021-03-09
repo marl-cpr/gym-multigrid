@@ -869,6 +869,19 @@ class MineActions:
     forward = 3
     build = 4
 
+class HarvestActions:
+    available = ['noop', 'step_left', 'step_right', 'step_forward',
+                 'step_backward', 'turn_left', 'turn_right', 'tag']
+
+    noop = 0
+    step_left = 1
+    step_right = 2
+    step_forward = 3
+    step_backward = 4
+    turn_left = 5
+    turn_right = 6
+    tag = 7
+
 class MultiGridEnv(gym.Env):
     """
     2D grid world game environment
@@ -1305,6 +1318,12 @@ class MultiGridEnv(gym.Env):
             # Done action (not used by default)
             elif actions[i] == self.actions.done:
                 pass
+
+            elif actions[i] == self.actions.tag:
+                for j in range(len(self.agents)):
+                    if self.agents[j] in self.gen_obs_grid()[0][i]:
+                        self.agents[j].paused = True
+                        self.agents[j].freeze_counter = 25
 
             else:
                 assert False, "unknown action"

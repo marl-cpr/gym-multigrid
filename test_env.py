@@ -10,38 +10,23 @@ args = parser.parse_args()
 
 def main():
 
-    if args.env == 'soccer':
-        register(
-            id='multigrid-soccer-v0',
-            entry_point='gym_multigrid.envs:SoccerGame4HEnv10x15N2',
-        )
-        env = gym.make('multigrid-soccer-v0')
+    register(
+        id="multigrid-harvest-v0",
+        entry_point="gym_multigrid.envs:Harvest4HEnv10x10N2"
+    )
+    env = gym.make("multigrid-harvest-v0")
+    nb_agents = 3
 
-    elif args.env == "harvest":
-        register(
-            id="multigrid-harvest-v0",
-            entry_point="gym_multigrid.envs:Harvest4HEnv10x10N2"
-        )
-        env = gym.make("multigrid-harvest-v0")
-
-    else:
-        register(
-            id='multigrid-collect-v0',
-            entry_point='gym_multigrid.envs:CollectGame4HEnv10x10N2',
-        )
-        env = gym.make('multigrid-collect-v0')
-
-    _ = env.reset()
-
-    nb_agents = len(env.agents)
 
     while True:
         env.render(mode='human', highlight=True)
         time.sleep(0.1)
 
-        ac = [env.action_space.sample() for _ in range(nb_agents)]
+        actions = [0] * len(env.agents)
+        for i in range(len(env.agents)):
+            action = env.agents[i].get_action(obs[0][i], )
 
-        obs, _, done, _ = env.step(ac)
+        obs, _, done, _ = env.step(agents)
 
         if done:
             break
